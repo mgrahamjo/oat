@@ -1,0 +1,100 @@
+{ 
+
+  "plugins": [],
+  "extends": ["eslint:recommended"],
+
+  // Environment Variables
+  // http://eslint.org/docs/user-guide/configuring.html#specifying-environments
+
+  "env": {
+    "node": true,
+    "browser": true
+  },
+
+  "globals": {
+    "oat": true,
+    "Promise": true
+  },
+  
+  "parserOptions": {
+    "ecmaVersion": 6,
+    "ecmaFeatures": {
+      "jsx": true,
+      "modules": true
+    }
+  },
+
+  "rules": { 
+    // 2 --> error
+    "no-alert": 2,   // production code should not have an alert
+    "no-shadow-restricted-names": 2, // disallow shadowing of names such as arguments
+    "no-mixed-requires": 2, // seperate var = require(...) and other var declarations.  (https://github.com/eslint/eslint/blob/master/docs/rules/no-mixed-requires.md)
+    "no-shadow": 2, // disallow declaration of variables already declared in the outer scope
+    "eol-last": 2, // last line should have an end-of-line character so that you can easily use linux commands with them (cat etc.)
+    "key-spacing": 2, // there should be no space before colon and a space after one.  e.g. {a: 5}.  Not {a:5} or {a :5}
+    "semi-spacing": 2, // must have no space before a ; but must have one after (if not eol)
+    "space-infix-ops": 2, // infix operators should be spaced.  e.g.: a + b rather than a+b
+    "space-unary-ops": 2, // e.g. typeof 5.  rather than typeof5
+    "keyword-spacing": 2,  // there should be a space after & before keywords.  e.g. no return5; should be return 5;
+    "comma-spacing": 2, // space after a comma
+    "indent": [2, 2], // indent is 2 spaces (softtab)
+    "no-unused-expressions": 2, // no unused expressions.  aka one that is evaluated to a value but never used;
+    "semi": 2, // every statement should end with ;
+    "comma-dangle": 2, // No dangling comma at the end of last element in arrays or objects
+    "new-cap": 2, // require constructor function names to begin with a capital letter
+    "curly": [2, "all"], // never omit curly braces around blocks (even single line blocks)
+    "dot-notation": [2, { "allowKeywords": true }], // enforce dot notation whenever possible
+    "eqeqeq": 2, // use === and !== instead of == and !=
+    "no-else-return": 2, // Else is never required if if block ends with return statement, so just omit it
+    "no-eval": 2, // don't use eval() function
+    "space-before-blocks": 2, //There should be a space before curly brackets. e.g. no function(){}, shoule be function() {}
+    "no-extend-native": 2, // disallow extending native types
+    "no-extra-bind": 2, // disallow unnecessary calls to .bind()
+    "no-floating-decimal": 2, // no leading or trailing decimal point in numeric literals like .2, 5., -.7 Use 0.2, 5.0, -0.7 etc
+    "no-implied-eval": 2, // disallow the use of eval()-like methods
+    "no-lone-blocks": 2, // disallow unnecessary nested blocks
+    "no-loop-func": 2, // disallow function declarations and expressions inside loop statements
+    "no-multi-str": 2, // don't allow multiple spaces where no needed like var a  = b;
+    "no-new": 2, // no new operators outside of assignments or comparisons
+    "no-new-func": 2, // disallow new operators with the Function object
+    "no-new-wrappers": 2, // disallow new operators with the String, Number, and Boolean objects
+    "no-octal-escape": 2, // disallow octal escape sequences in string literals
+    "no-proto": 2, // disallow the use of the __proto__ property
+    "no-return-assign": 2, // disallow assignment operators in return statements
+    "no-script-url": 2, // disallow javascript: urls
+    "no-self-compare": 2, //disallow comparisons where both sides are exactly the same
+    "no-sequences": 2, // disallow comma operators
+    "no-throw-literal": 2, // disallow throwing literals as exceptions
+    "no-use-before-define": 2, // cant use a var before it is defined (aka disallow hoisting)
+    "no-with": 2, // disallow with statements
+    "radix": 2, // enforce the consistent use of the radix argument when using parseInt()
+    "vars-on-top": 2, // require var declarations be placed at the top of their containing scope
+    "wrap-iife": 2, // require parentheses around immediate function invocations
+    "yoda": 2, // don't allow comparisons like 5 === count. Use count === 5 instead.
+    "quotes": [2, "single", {"avoidEscape": true}], // enforce single quotes for strings. allow double quotes to avoid escaping single quotes like "say 'hello world'"
+    "no-extra-parens": 2, // don't allow unnecessary parenthesis. It causes confusion
+    "no-multiple-empty-lines": [2, {"max": 2, "maxEOF": 1, "maxBOF": 1 }], // Don't allow unnecessary multiple empty lines
+    "no-empty-function": 2, // always specifically write a comment inside function body
+    "no-var": 2, // don't use var, use const or let instead
+    "array-callback-return": 2, // Enforces return statements in callbacks of array’s methods 
+    "dot-location": [2, "property"], // use consistent dot location before property name when breaking property chain in multiline
+    "no-useless-call": 2, // disallow unnecessary calls to .call() and .apply()
+    "array-bracket-spacing": 2, // disallows spaces inside array brackets like [2, 3]
+    "brace-style": [2, "1tbs", {"allowSingleLine": false}], // enforce one true brace style even for single line blocks
+    "comma-style": 2, // Place commas at the EOL in arrays etc while breaking in multiline
+    "max-depth": 2, // enforce a maximum depth of 4 in nested code blocks
+    "no-nested-ternary": 2, // disallow nested ternary expressions
+    "prefer-arrow-callback": 2, // Suggest using arrow functions as callbacks
+    "prefer-const": 2, // Suggest using const for variables which are declared using let but never reassigned
+    "object-curly-spacing": 2, // don't allow extra spaces in object curly braces. {a: 5 } should be {a: 5}
+    "max-len": [2, 120, {"ignoreComments": true, "ignoreUrls": true, "ignorePattern": "^import"}], // max length of a line should not exceed 120 chars excepts for comments, urls and import statements.
+    "camelcase": 2, // naming should be in camelCase. No snake_case
+
+    // 1 - warnings: These should be converted to errors in near future
+
+    // 0 - ignore these
+    "no-console": 0, // production code should not have console cmds
+
+    "react/prop-types": 0 // React properties should be validated 
+ }
+}

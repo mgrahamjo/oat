@@ -1,0 +1,32 @@
+{
+  "name": "oat",
+  "version": "0.0.1",
+  "description": "Earth's most minimalistic single page application framework. Great source of fiber.",
+  "main": "oat.js",
+  "jsnext:main": "oat.next.js",
+  "directories": {
+    "test": "test"
+  },
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/mgrahamjo/oat.git"
+  },
+  "keywords": [
+    "single",
+    "page",
+    "app",
+    "application",
+    "minimal",
+    "oat",
+    "alternative"
+  ],
+  "author": "mgrahamjo",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/mgrahamjo/oat/issues"
+  },
+  "homepage": "https://github.com/mgrahamjo/oat#readme"
+}
