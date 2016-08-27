@@ -1,13 +1,13 @@
 # Oat
 
-Oat is proof that modern JavaScript frameworks are cluttered with unnecessary cruft and arbitrary limitations. Believe it or not, vanilla JavaScript provides you with everything you need to write a full-featured single page application complete with templating and routing. Oat simply provides some nifty tricks for handling common tasks like HTML escaping, managing events, and organizing parent and child components - all in less than 1kb.
+Oat is proof that modern JavaScript frameworks are cluttered with unnecessary cruft and arbitrary limitations. Believe it or not, vanilla JavaScript provides you with everything you need to write a full-featured single page application complete with templating and routing. Oat simply provides some nifty tricks for handling common tasks like HTML escaping, managing events, and organizing parent and child components - all in less than 1kb after compression.
 
 ## Example
 
 ```html
 <div id="app"></div>
 
-<script src="../oat.js"></script>
+<script src="./oat.js"></script>
 
 <script>
 
@@ -161,3 +161,22 @@ oat.component({
 
 });
 ```
+## Before you think about jQuery...
+
+Oat can also help you access DOM elements directly, although this shouldn't be necessary for anything in a component. When passed a selector, `oat` will return the first matching DOM node.
+
+```javascript
+oat('.menu').classList.toggle('visible');
+```
+
+To iterate over all matching elements, provide a callback:
+
+```javascript
+oat('.menu a', el => {
+  el.classList.toggle('active');
+});
+```
+
+## Browser support
+
+Oat uses ES2015 features. It works out of the box in Chrome, Firefox, and IE Edge, but for good compatibility you should use a transpiler. 

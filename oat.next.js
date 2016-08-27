@@ -65,7 +65,7 @@ oat.event = handler => {
 
     handler(e);
     
-    if (!['INPUT', 'TEXTAREA'].includes(e.target.tagName)) {
+    if (['INPUT', 'TEXTAREA'].indexOf(e.target.tagName) === -1) {
     
       oat[name]();
     

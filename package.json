@@ -1,6 +1,6 @@
 {
   "name": "oat",
-  "version": "0.0.1",
+  "version": "0.0.2",
   "description": "Earth's most minimalistic single page application framework. Great source of fiber.",
   "main": "oat.js",
   "jsnext:main": "oat.next.js",
