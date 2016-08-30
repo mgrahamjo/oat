@@ -41,12 +41,8 @@ oat.events = {};
 oat.html = (strings, ...values) => {
 
   return MAGIC_FLAG + strings.map((string, i) => {
-
-    if (values[i] === undefined) {
-      values[i] = '';
-    }
     
-    return string + htmlEscape(values[i]);
+    return string + (values[i] === undefined ? '' : htmlEscape(values[i]));
 
   }).join('');
 
@@ -116,6 +112,12 @@ function initialize(config) {
 
   if (config.route !== undefined) {
 
+    if (typeof config.route === 'string') {
+
+      config.route = `^${config.route}$`;
+
+    }
+
     state.routes.push(config);
 
     runIfRouteMatches(getHash(), config);
@@ -128,27 +130,33 @@ function initialize(config) {
 
 }
 
+function createParentComponent(config) {
+
+  oat[config.name] = (...args) => {
+
+    state.current = config;
+    
+    oat.events[config.selector] = [];
+
+    args.push(oat[config.name].data);
+
+    const html = stringify(config.render.apply(window, args));
+
+    oat(config.selector).innerHTML = html.replace(FLAG_REGEX, '');
+
+    delete state.current;
+
+  };
+
+}
+
 oat.component = config => {
 
   if (config.selector) {
 
-    oat[config.name] = (...args) => {
+    createParentComponent(config);
 
-      state.current = config;
-      
-      oat.events[config.selector] = [];
-
-      args.push(oat[config.name].data);
-
-      const html = stringify(config.render.apply(window, args));
-
-      oat(config.selector).innerHTML = html.replace(FLAG_REGEX, '');
-
-      delete state.current;
-
-    };
-
-    initialize(config);
+    initialize(config);    
 
   } else {
 
