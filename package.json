@@ -1,20 +1,15 @@
 {
   "name": "oat",
-  "version": "0.0.3",
-  "description": "Earth's most minimalistic single page application framework. Great source of fiber.",
+  "version": "1.0.0",
+  "description": "Don't want a framework? This is the framework for you.",
   "main": "oat.js",
-  "jsnext:main": "oat.next.js",
-  "directories": {
-    "test": "test"
-  },
-  "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
-  },
   "repository": {
     "type": "git",
     "url": "git+https://github.com/mgrahamjo/oat.git"
   },
   "keywords": [
+    "universal",
+    "isomorphic",
     "single",
     "page",
     "app",

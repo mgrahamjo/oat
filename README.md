@@ -1,182 +1,369 @@
 # Oat
 
-Oat is proof that modern JavaScript frameworks are cluttered with unnecessary cruft and arbitrary limitations. Believe it or not, vanilla JavaScript provides you with everything you need to write a full-featured single page application complete with templating and routing. Oat simply provides some nifty tricks for handling common tasks like HTML escaping, managing events, and organizing parent and child components - all in less than 1kb after compression.
+Oat is a tiny collection of utilities for building universal JavaScript single page applications. Created for those who are skeptical of frameworks or dependencies, it's a mere 1.3kb of client side code ([babilified](https://babeljs.io/blog/2016/08/30/babili) and gzipped), and has no dependencies. 
+
+## The Philosophy
+
+There is a cost to taking on a dependency or abstracting a feature of native JavaScript. Dependencies release breaking changes, JavaScript grows, and best practices evolve. Eschewing trendy abstractions and simplifying wherever possible leaves the fewest potential points of failure and creates the cleanest path to adopting new practices and language features in the future.
+
+## Install
+
+`npm install oat --save`
 
 ## Example
 
+The following is a simple app that displays a button and a count of the number of times the button has been clicked.
+
 ```html
-<div id="app"></div>
-
-<script src="./oat.js"></script>
-
+<div data-oat="app"></div>
+<script src="node_modules/oat/browser.js"></script>
 <script>
 
-function listItem(item) {
-
-  const click = oat.event(e => {
-    console.log(`you clicked ${item}`);
+function init(vm) {
+  // Put some data on the view model
+  vm.count = 0;
+  // Create an event handler
+  vm.click = oat.event(() => {
+    vm.count++;
   });
-
-  return oat.html`<li class="item" onclick=${click}>${item}</li>`;
 }
 
-oat.component({
-  
-  name: 'todoList',
+function render(vm) {
+  return oat`
+    <div>
+      <button onclick=${vm.click()}>Click</button>
+      <p>Clicks: ${vm.count}</p>
+    </div>`;
+}
 
-  selector: '#app',
-
-  route: 'todo',
-
-  init: resolve => {
-    // Good place to get AJAX data
-    resolve(['a', 'b', 'c']);
-  },
-
-  render: items => {
-    return oat.html`<ul class="todos">${items.map(listItem)}</div>`;
-  }
-
-});
+oat.component('app', init, render)();
 </script>
 ```
 
-This example renders the following markup:
-
-```html
-<div id="app">
-  <ul class="todos">
-    <li class="item" onclick="oat.events['#app'][0](event)">a</li>
-    <li class="item" onclick="oat.events['#app'][1](event)">b</li>
-    <li class="item" onclick="oat.events['#app'][2](event)">c</li>
-  </ul>
-</div>
-```
-
-There's a lot going on in this example. Let's break it down:
-
-## Component options
-
-To create a component, pass a configuration object to `oat.component()`. Options include:
-
-- `name` (string, required): This is the identifier for the component. You can render a component at any time by calling `oat.componentName()`, where `componentName` is this identifier.
-
-- `selector` (string, optional): If supplied, the component will render in the element that matches this CSS selector.
-
-- `route` (string or regex, optional): If supplied, the component will only appear when the hash portion of the URL matches this string or regular expression.
-
-- `init` (function, optional): If supplied, this function will be passed a resolve callback. The initial render will not occur until resolve is called, optionally with data to pass to the render method.
-
-- `render` (function, required): This function should return a string of HTML to render.
-
 ## Templates
 
-The Oat way is to simply use ES2015 template strings tagged with `oat.html`. This tag does two things:
+The Oat way to create templates is to use template strings tagged with `oat`. This tag does three things:
 
-- It HTML-escapes your template variables, with a bit of magic to avoid escaping the parts of child component templates that aren't variables. 
+- It HTML-escapes your template variables.
+- It allows you to use template variables that are strings, numbers, arrays, or DOM elements.
+- It returns a DOM element rather than a string, which enables Oat to avoid re-rendering components whenever possible.
 
-- It allows you to use template variables that are strings, numbers, or arrays of strings or numbers, as in the example above.
+As with other view frameworks, it is required that each template have a single root element to facilitate optimized re-renders. 
 
-Don't want to HTML escape a particular template? Don't tag it with `oat.html`.
+## Components
+
+`oat.component([string] name, [function] init, [function] render)`
+
+This method creates and returns a component function. It accepts three arguments:
+
+- `name`: This string is used to identify the component. 
+- `init` (optional): This function is passed two arguments - a view model, to which it can append properties and methods for use in the template, and an update function, which can be called to force a re-render.
+- `render`: This function is passed the view model after it has been initialized. Additional arguments can be passed to `render` by parent components.
+
+## Component Placeholders
+
+You can specify a DOM element in which to mount a component by setting the `data-oat` attribute to the component's name.
+
+```html
+<div data-oat="parent"></div>
+<script>
+oat.component('parent', vm => {
+  vm.greeting = 'Hello';
+},
+  vm => oat`<h1>${vm.greeting}, World</h1>`
+)();
+</script>
+<!--
+  Renders the following:
+  <h1>Hello, World</h1>
+-->
+```
+
+## Nested Components
+
+Components can be rendered inside the templates of other components thusly:
+
+```html
+<div data-oat="parent"></div>
+<script>
+// Child component
+const child = oat.component('child', vm => {
+  vm.thing = 'World';
+},
+  vm => oat`<span>${vm.thing}</span>`
+);
+// Parent component
+oat.component('parent', vm => {
+  vm.greeting = 'Hello';
+},
+  vm => oat`<h1>${vm.greeting}, ${child()}</h1>`
+)();
+</script>
+<!--
+  Renders the following:
+  <h1>Hello, <span>World</span></h1>
+-->
+```
+
+## Passing data to child components
+
+This example is the same as the above, except that the parent component tells the child component what kind of HTML tag to render.
+
+```html
+<div data-oat="parent"></div>
+<script>
+// Child component
+const child = oat.component('child', vm => {
+  vm.thing = 'World';
+},
+  (vm, tag) => oat`<${tag}>${vm.thing}</${tag}>`
+);
+// Parent component
+oat.component('parent', vm => {
+  vm.greeting = 'Hello';
+},
+  vm => oat`<h1>${vm.greeting}, ${child('em')}</h1>`
+)();
+</script>
+<!--
+  Renders the following:
+  <h1>Hello, <em>World</em></h1>
+-->
+```
+
+> Note that `vm` is always the first argument of a render function. Any arguments that were passed by a parent component will come after `vm`.
+
+> Performance tip: when possible, avoid passing objects or arrays as arguments to child components. Doing so means that the component will have to be re-rendered every time its parent is rendered, because deep equality checks on objects are prohibitively expensive. Strings, numbers, dates, and even functions are fine.
 
 ## Events
 
-Handling events with Oat feels a lot like handling events with React. Just register an event handler with `oat.event()`, and reference it using native DOM syntax in your template.
+Just register an event handler with `oat.event()`, and reference it using native DOM syntax in your template.
 
 ```javascript
-const submit = oat.event(e => {
+vm.submit = oat.event(e => {
   e.preventDefault();
-  $.post('/api', {
-    data: data
-  });
+  updateViewModelSomehow();
 });
-
-return oat.html`<form onsubmit=${submit}>
+...
+return oat`<form onsubmit=${vm.submit()}>
   <button type="submit">Submit</button>
 </form>`;
 ```
 
-## Child Components
+After an event handler executes, the component will automatically be re-rendered.
 
-If you don't configure a component to render inside a specific element with the `selector` option, you can render it inside any other component's template. Here's an example:
+`oat.event()` returns a function to which you can pass arbitrary data for use in your event handler. The DOM event will always be appended to the arguments sent to the handler.
 
 ```javascript
-oat.component({
-  
-  name: 'app',
+const component = oat.component('example', vm => {
 
-  selector: '#app',
+  vm.click = oat.event((thingA, thingB, event) => {
+    console.log(thingA, thingB, event.target.innerHTML);
+  });
 
-  render: () => {
-    return oat.html`<div class="container">
-      ${oat.content()}
-    </div>`;
-  }
+}, (vm, thingA, thingB) => {
+
+  return oat`<button onclick=${vm.click(thingA, thingB)}>baz</button>`;
 
 });
 
-oat.component({
-  
-  name: 'content',
+component('foo', 'bar');
+...
+```
 
-  render: () => {
-    return oat.html`<span>This is a child template.</span>`;
-  }
+Given this code, `component('foo', 'bar')` will render a button that logs `foo bar baz` when clicked.
 
+> Event handlers should be the only place you interact with DOM APIs. Don't worry about using browser-only code within event handlers in server-rendered components - event handlers are never run on the server.
+
+## Re-rendering a component
+
+A component will automatically be re-rendered after handling an event created with `oat.event`. If you need to re-render after doing other asynchronous work such as making an AJAX call, just call the second argument of your init function.
+
+```javascript
+function init(vm, update) {
+
+  vm.text = 'Waiting...';
+
+  setTimeout(() => {
+    vm.text = 'Re-rendered.';
+    update();
+  }, 2000);
+
+}
+
+function render(vm) {
+  return oat`<h1>${vm.text}</h1>`;
+}
+
+oat.component('timer', init, render)();
+```
+
+## Routing
+
+As in the examples above, simple apps can be run by executing the function returned by `oat.component`. More complex apps can be bootstrapped by the `oat.app` method, which provides the opportunity to perform routing. Though not required, in this example we will assume you are using a module bundler like Webpack or Browserify.
+
+`oat.app()` accepts a callback and passes it an ES2015 map. On this map you can set strings or regular expressions as route keys, and components as values. The components will run only when their respective routes match.
+
+```javascript
+const home = require('./components/home'),
+  about = require('./components/about'),
+  blog = require('./components/blog');
+
+oat.app(route => {
+  route.set('/', home);
+  route.set('/about', about);
+  route.set(/^\/blog/, blog);
 });
 ```
 
-### Passing data to children
+### Route data
 
-Here's a slightly more complex example that passes data to the child component.
+Information about the current route can be found on the `oat.request` object, which loosely mirrors Express's `req` object:
 
-```javascript
-oat.component({
-  
-  name: 'app',
+- href: the full current URL (excluding the hash fragment when read on the server side)
+- hostname: the domain of the host
+- path: the portion of the url that excludes the hostname, query string, and hash fragment.
+- hash: the hash fragment of the URL, exluding the hash sign. This is always undefined on the server side.
+- query: the query string parameters in a deserialized object.
+- params: an array of any matches from capturing groups in the route regular expression.
 
-  selector: '#app',
-
-  init: resolve => {
-    resolve({
-      example: 'foo'
-    });
-  }
-
-  render: data => {
-    return oat.html`<div class="container">
-      ${oat.content(data)}
-    </div>`;
-  }
-
-});
-
-oat.component({
-  
-  name: 'content',
-
-  render: data => {
-    return oat.html`<span>Example data: ${data.example}</span>`;
-  }
-
-});
-```
-## Before you think about jQuery...
-
-Oat can also help you access DOM elements directly, although this shouldn't be necessary for anything in a component. When passed a selector, `oat` will return the first matching DOM node.
+Given this route regex:
 
 ```javascript
-oat('.menu').classList.toggle('visible');
-```
-
-To iterate over all matching elements, provide a callback:
-
-```javascript
-oat('.menu a', el => {
-  el.classList.toggle('active');
+oat.app(route => {
+  route.set(/^\/blog\/([a-z]*)/, blog);
 });
 ```
+
+And this route: `http://localhost:8080/blog/post#top?id=3`
+
+The route object will be as follows:
+
+```javascript
+{
+  href: 'http://localhost:8080/blog/post#top?id=3', // Excludes hash on the server side
+  hostname: 'localhost',
+  path: '/blog/post',
+  hash: 'top', // undefined on the server side
+  query: { id: 3 },
+  params: ['post']
+}
+```
+
+### Route links
+
+#### From JavaScript
+
+You can trigger a transition using `oat.go('/url')`. The page URL will be updated and the app re-rendered, without a page reload.
+
+#### From HTML
+
+Create a link using `oat.link('/url')` as if it were an attribute on the element.
+
+```javascript
+<a ${oat.link('/foo')}>Foo</a>
+```
+
+This will create both an `href` attribute (to preserve SEO benefits on server-rendered apps) as well as an `onclick` event.
+
+If you want to transition on an event other than click, just pass the event as the second parameter. In this case an `href` attribute will not be rendered.
+
+```javascript
+<form ${oat.link('/foo', 'submit')}>
+  <input type="submit"/>
+</form>
+```
+
+## Server-side rendering
+
+You only have to write an Oat component once, and it can run both in Node (Express) and in the browser. This means that your app will already be rendered on page load, making it search engine friendly and a great UX. Here's an example setup of an Express app using Oat:
+
+Directory structure:
+```
+- project/
+  - index.js
+  - universal/
+    - app.html
+    - my-app.js
+    - component.js
+```
+
+universal/my-app.js
+```javascript
+const oat = require('oat'),
+  component = require('./component');
+
+module.exports = oat.app(route => {
+  route.set('/', component);
+});
+```
+
+index.js
+```javascript
+const express = require('express'),
+  app = express(),
+  // be sure to require 'oat/server' here, not 'oat'
+  oatServer = require('oat/server'),
+  myApp = require('./universal/my-app');
+// Make files in the 'universal' directory accessible to the browser.
+app.use(express.static('universal'));
+// Set the HTML file in which to run your components.
+oatServer.setViewSync('universal/app.html');
+// Pass in your app module
+oatServer.use(myApp);
+// Route handler
+app.get('/', (req, res) => {
+  const html = oatServer.respond(req);
+  res.send(html);
+});
+app.listen(8080);
+```
+
+> As a best practice, do not name your HTML file index.html. If it is located in a directory that Express is serving static files from, requests to the index route ('/') would return the unparsed index.html file.
+
+`oat.respond([object] request, [object] vm)` returns the rendered HTML.
+- `request`: the Express request object
+- `vm` (optional): the default view model for all components on this request
+
+### Server-generated default view models
+
+The optional `vm` argument can be used to add data to the view model that is only accessble on the server side, such as CSRF tokens or session data. Here's an example route handler:
+
+```javascript
+app.get('/form', (req, res) => {
+  csrfLibrary.setSession(req.cookies.id);
+  csrfLibrary.makeToken(token => {
+    const vm = { token },
+      html = oat.respond(req, vm);
+    res.send(html);
+  });
+});
+```
+
+When using a server-generated default view model, it is recommended to set fallback values in the component. This provides visibility into what properties are expected to be available on the model, and makes it clear if the server failed to populate the `vm`.
+
+```javascript
+const form = oat.component('form', vm => {
+  vm.token = vm.token || 'TOKEN NOT FOUND';
+}, vm => {
+  return oat`<form>
+    <input type="text" name="input"/>
+    <input type="hidden" value=${vm.token}/>
+    <button type="submit"></button>
+  </form>`;
+})
+```
+
+If you are wondering how this server-generated data is persisted once the browser takes over, read on:
+
+### State hydration
+
+Oat will automatically convert the server-generated default view model into JSON, insert it into the DOM, and then parse it when the client side code runs, seamlessly persisting your server side view model on the client. Note that JavaScript functions cannot be parsed into JSON. If you must use a method on your default view model, a check or fallback method will be required for the client side.
+
+### Server vs browser checks
+
+In a well-structured application, code that can only run on the server should always be written in an Express route handler, and components should be completely agnostic to their environment. If for some reason you must write a check within a component to see if your code is running on a server or in a browser, you may check the global `oatServer` object for truthiness.
 
 ## Browser support
 
-Oat uses ES2015 features. It works out of the box in Chrome, Firefox, and IE Edge, but for good compatibility you should use a transpiler. 
+Oat supports Chrome, Firefox, and IE Edge out of the box. For broader compatiblity, include it in your transpilation task.
