@@ -32,6 +32,11 @@
     parent,
 
     /**
+     * Flag that turns off HTML escaping when true
+     */
+    trust,
+
+    /**
      * Parse the default view model from the DOM
      */
     defaultVM = document.querySelector('script#_oat_vm');
@@ -87,7 +92,7 @@
 
       }).join('');
 
-    } else {
+    } else if (!trust) {
 
       value = htmlEscape(value);
 
@@ -106,13 +111,12 @@
 
     const nodes = [];
     
-    let newNode,
-      value;
+    let value;
 
     /**
      * Parse the template string into a new DOM node
      */
-    newNode = parse(strings.map((string, i) => {
+    const newNode = parse(strings.map((string, i) => {
 
       if (values[i] === undefined) {
 
@@ -126,7 +130,7 @@
 
         nodes.push(values[i]);
 
-        value = `<i id="oat-index-${nodes.length-1}"></i>`;
+        value = `<i id="oat-index-${nodes.length - 1}"></i>`;
 
       } else {
 
@@ -153,6 +157,21 @@
     return newNode;
 
   }
+
+  /**
+   * Turn off HTML escaping before rendering
+   */
+  oat.trust = (...args) => {
+
+    trust = true;
+
+    const result = oat.apply(undefined, args);
+
+    trust = false;
+
+    return result;
+
+  };
 
   /**
    * Determine whether the component should be re-rendered
@@ -246,9 +265,10 @@
             children: {},
             rendered: {}
           },
-          tempID = parent.id;
-
-        let vm = Object.create(defaultVM);
+          
+          tempID = parent.id,
+          
+          vm = Object.create(defaultVM);
 
         /**
          * If a view model initializer was passed, run it,
@@ -288,7 +308,7 @@
 
           const oldNode = oat.component[id].node,
 
-            newNode = render.apply(undefined, [vm, ...newArgs]);
+            newNode = render(vm, ...newArgs);
 
           oldNode.parentNode.replaceChild(newNode, oldNode);
 
@@ -333,7 +353,9 @@
       delete oat.component[component.id];
 
       document.querySelectorAll(`[data-oat="${name}"]`).forEach(el => {
+
         el.innerHTML = '';
+
       });
 
     };
@@ -432,8 +454,7 @@
       href: window.location.href,
       hostname: window.location.hostname,
       path: window.location.pathname,
-      hash: window.location.hash.replace('#', ''),
-      query: getQuery(),
+      query: getQuery()
     };
   }
 
@@ -496,4 +517,4 @@
 
   }
 
-})()
+})();

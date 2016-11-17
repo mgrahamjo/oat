@@ -40,6 +40,11 @@ let appHTML,
   app,
 
   /**
+   * Flag that turns off HTML escaping when true
+   */
+  trust,
+
+  /**
    * Default view model
    */
   defaultVM;
@@ -73,7 +78,7 @@ function htmlEscape(value) {
 
   value = stringify(value);
 
-  if (value.indexOf(MAGIC_FLAG) === 0) {
+  if (value.indexOf(MAGIC_FLAG) === 0 || trust) {
 
     return value;
 
@@ -99,6 +104,21 @@ function oat(strings, ...values) {
   }).join('');
 
 }
+
+/**
+ * Turn off HTML escaping before rendering
+ */
+oat.trust = (...args) => {
+
+  trust = true;
+
+  const result = oat.apply(undefined, args);
+
+  trust = false;
+
+  return result;
+
+};
 
 /**
  * DOM events can noop on the server

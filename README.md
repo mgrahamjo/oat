@@ -1,6 +1,6 @@
 # Oat
 
-Oat is a tiny collection of utilities for building universal JavaScript single page applications. Created for those who are skeptical of frameworks or dependencies, it's a mere 1.3kb of client side code ([babilified](https://babeljs.io/blog/2016/08/30/babili) and gzipped), and has no dependencies. 
+Oat is a tiny collection of utilities for building universal JavaScript single page applications. Created for those who are skeptical of frameworks or dependencies, it's a mere 1.36kb of client side code ([babilified](https://babeljs.io/blog/2016/08/30/babili) and gzipped), and has no dependencies. 
 
 ## The Philosophy
 
@@ -49,6 +49,8 @@ The Oat way to create templates is to use template strings tagged with `oat`. Th
 - It returns a DOM element rather than a string, which enables Oat to avoid re-rendering components whenever possible.
 
 As with other view frameworks, it is required that each template have a single root element to facilitate optimized re-renders. 
+
+> Don't want to HTML escape a template string? You can use `oat.trust` instead of `oat`, but make sure you aren't creating a script injection vulnerability.
 
 ## Components
 
@@ -223,7 +225,6 @@ Information about the current route can be found on the `oat.request` object, wh
 - href: the full current URL (excluding the hash fragment when read on the server side)
 - hostname: the domain of the host
 - path: the portion of the url that excludes the hostname, query string, and hash fragment.
-- hash: the hash fragment of the URL, exluding the hash sign. This is always undefined on the server side.
 - query: the query string parameters in a deserialized object.
 - params: an array of any matches from capturing groups in the route regular expression.
 
@@ -244,7 +245,6 @@ The route object will be as follows:
   href: 'http://localhost:8080/blog/post#top?id=3', // Excludes hash on the server side
   hostname: 'localhost',
   path: '/blog/post',
-  hash: 'top', // undefined on the server side
   query: { id: 3 },
   params: ['post']
 }
@@ -366,4 +366,4 @@ In a well-structured application, code that can only run on the server should al
 
 ## Browser support
 
-Oat supports Chrome, Firefox, and IE Edge out of the box. For broader compatiblity, include it in your transpilation task.
+Oat supports Chrome, Firefox, and IE Edge out of the box. For compatiblity back to IE9, include Oat in your transpilation task.
