@@ -366,4 +366,4 @@ In a well-structured application, code that can only run on the server should al
 
 ## Browser support
 
-Oat supports Chrome, Firefox, and IE Edge out of the box. For compatiblity back to IE9, include Oat in your transpilation task.
+Oat supports Chrome, Firefox, and IE Edge out of the box. For compatiblity back to IE9, use the [babel-polyfill](https://babeljs.io/docs/usage/polyfill/).
