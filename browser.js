@@ -379,7 +379,7 @@
 
       oat.event[id].push(e => {
 
-        args.push(e);
+        args.push(e, e.currentTarget);
 
         if (handler.apply(undefined, args) !== false) {
 

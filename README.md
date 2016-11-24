@@ -154,13 +154,15 @@ return oat`<form onsubmit=${vm.submit()}>
 
 After an event handler executes, the component will automatically be re-rendered, *unless* the event handler returns `false`.
 
-`oat.event()` returns a function to which you can pass arbitrary data for use in your event handler. The DOM event will always be appended to the arguments sent to the handler.
+`oat.event()` returns a function to which you can pass arbitrary data for use in your event handler. Two objects will always be appended to the list of arguments passed to the handler:
+- The DOM event
+- The element which triggered the event
 
 ```javascript
 const component = oat.component('example', vm => {
 
-  vm.click = oat.event((thingA, thingB, event) => {
-    console.log(thingA, thingB, event.target.innerHTML);
+  vm.click = oat.event((thingA, thingB, event, el) => {
+    console.log(thingA, thingB, el.innerHTML);
   });
 
 }, (vm, thingA, thingB) => {

@@ -1,6 +1,6 @@
 {
   "name": "oat",
-  "version": "1.0.4",
+  "version": "1.0.5",
   "description": "Don't want a framework? This is the framework for you.",
   "main": "oat.js",
   "repository": {
