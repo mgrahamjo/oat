@@ -152,7 +152,7 @@ return oat`<form onsubmit=${vm.submit()}>
 </form>`;
 ```
 
-After an event handler executes, the component will automatically be re-rendered.
+After an event handler executes, the component will automatically be re-rendered, *unless* the event handler returns `false`.
 
 `oat.event()` returns a function to which you can pass arbitrary data for use in your event handler. The DOM event will always be appended to the arguments sent to the handler.
 

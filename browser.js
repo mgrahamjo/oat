@@ -381,9 +381,11 @@
 
         args.push(e);
 
-        handler.apply(undefined, args);
+        if (handler.apply(undefined, args) !== false) {
 
-        oat.component[id]();
+          oat.component[id]();
+
+        }
       
       });
 
