@@ -365,6 +365,19 @@
   };
 
   /**
+   * Force a component to re-render by id
+   */
+  oat.render = id => {
+
+    return (...args) => {
+
+      return oat.component[id](args);
+
+    };
+
+  };
+
+  /**
    * Associates an event handler with a specific
    * instance of a component, stores a reference
    * to it in the global namespace, and returns the

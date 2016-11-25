@@ -1,6 +1,6 @@
 # Oat
 
-Oat is a tiny collection of utilities for building universal JavaScript single page applications. Created for those who are skeptical of frameworks or dependencies, it's a mere 1.36kb of client side code ([babilified](https://babeljs.io/blog/2016/08/30/babili) and gzipped), and has no dependencies. 
+Oat is a tiny collection of utilities for building universal JavaScript single page applications. Created for those who are skeptical of frameworks or dependencies, it's a mere 1.7kb of client side code (transpiled, minified, and gzipped), and has no dependencies. 
 
 ## The Philosophy
 
@@ -200,6 +200,14 @@ function render(vm) {
 }
 
 oat.component('timer', init, render)();
+```
+
+If you want to re-render a component from another place in the app, first take a step back. Causing renders in one place from another can make code difficult to maintain. It also requires that you find the ID of the specific instance of that component (essentially it's path in the component tree) which is likely to change as you add and alter components in the future.
+
+That said, you can accomplish this using `oat.render`. It accepts the ID of the specific instance of the component you want to render (the same ID used internally by `oat.event`) and returns that component's render function.
+
+```javascript
+oat.render('parent0child0')('arguments');
 ```
 
 ## Routing
