@@ -1,535 +1,434 @@
 (() => {
 
-  /**
-   * DOMParser for converting strings to DOM nodes
-   */
-  const parser = new DOMParser(),
+    const ESCAPE_MAP = {
+            '<': '&lt;',
+            '>': '&gt;',
+            '"': '&quot;',
+            '\'': '&apos;'
+        },
+
+        /**
+         * Flag for marking strings as escaped
+         */
+        MAGIC_FLAG = '&zwnj;',
+
+        /**
+         * Regex for removing the magic flag
+         */
+        FLAG_REGEX = new RegExp(MAGIC_FLAG, 'g');
 
     /**
-     * HTML escaping map
+     * Convert a string, number, or array into a string
      */
-    ESCAPE_MAP = {
-      '<': '&lt;',
-      '>': '&gt;',
-      '"': '&quot;',
-      '\'': '&apos;'
-    };
+    function stringify(value) {
 
-  /**
-   * Tracks the top-level DOM node
-   * so we know when to reset
-   */
-  let topNode,
+        return Array.isArray(value) ? value.map(v => {
 
-    /**
-     * For re-rendering the app after a route change
-     */
-    renderAll,
+            return v.toString();
 
-    /**
-     * Tracks the parent of the currently rendering component
-     */
-    parent,
-
-    /**
-     * Flag that turns off HTML escaping when true
-     */
-    trust,
-
-    /**
-     * Parse the default view model from the DOM
-     */
-    defaultVM = document.querySelector('script#_oat_vm');
-
-  defaultVM = defaultVM ? JSON.parse(defaultVM.innerHTML) : {};
-
-  /**
-   * reset parent to default state
-   */
-  function resetParent() {
-
-    parent = {
-      id: '',
-      children: {},
-      rendered: {}
-    };
-
-  }
-
-  resetParent();
-
-  /**
-   * Given an HTML string, returns a DOM node.
-   */
-  function parse(string) {
-
-    return parser
-      .parseFromString(string, 'text/html')
-      .querySelector('body')
-      .firstElementChild;
-  }
-
-  /**
-   * Given a value, returns its HTML-escaped equivalent
-   */
-  function htmlEscape(value) {
-
-    return value.toString().replace(/[<>'"]/g, c => ESCAPE_MAP[c]);
-
-  }
-
-  /**
-   * Given an array, number, or string, returns an HTML-escaped string.
-   * Handles arrays containing DOM elements.
-   */
-  function stringify(value) {
-
-    if (Array.isArray(value)) {
-
-      value = value.map(v => {
-
-        return v.outerHTML || htmlEscape(v);
-
-      }).join('');
-
-    } else if (!trust) {
-
-      value = htmlEscape(value);
+        }).join('') : value.toString();
 
     }
 
-    return value;
-
-  }
-
-  /**
-   * Template tag function. Given a template string, 
-   * interpolates, stringifies, and escapes template variables.
-   * Returns a new DOM node.
-   */
-  function oat(strings, ...values) {
-
-    const nodes = [];
-    
-    let value;
-
     /**
-     * Parse the template string into a new DOM node
+     * HTML escape a string unless it has been marked safe
      */
-    const newNode = parse(strings.map((string, i) => {
+    function htmlEscape(value) {
 
-      if (values[i] === undefined) {
+        value = stringify(value);
 
-        value = '';
+        if (value.indexOf(MAGIC_FLAG) === 0) {
 
-      /**
-       * If a value is a DOM node, save a reference to it
-       * and give it a placeholder in the new HTML string.
-       */
-      } else if (values[i].outerHTML) {
+            return value;
 
-        nodes.push(values[i]);
+        }
 
-        value = `<i id="oat-index-${nodes.length - 1}"></i>`;
+        return value.replace(/[<>'"]/g, c => {
 
-      } else {
+            return ESCAPE_MAP[c];
 
-        value = stringify(values[i]);
-
-      }
-
-      return string + value;
-
-    }).join(''));
-
-    /**
-     * Iterate through the DOM nodes we saved, and insert them
-     * at their respective placeholders in the new node.
-     */
-    nodes.forEach((node, i) => {
-
-      const tempNode = newNode.querySelector(`#oat-index-${i}`);
-
-      tempNode.parentNode.replaceChild(node, tempNode);
-
-    });
-
-    return newNode;
-
-  }
-
-  /**
-   * Turn off HTML escaping before rendering
-   */
-  oat.trust = (...args) => {
-
-    trust = true;
-
-    const result = oat.apply(undefined, args);
-
-    trust = false;
-
-    return result;
-
-  };
-
-  /**
-   * Determine whether the component should be re-rendered
-   * based on whether the arguments may have changed
-   */
-  function argsMayHaveChanged(args, id) {
-
-    for (let i = 0; i < args.length; i++) {
-
-      /**
-       * Deep equality checks on objects would be too expensive,
-       * so if the arg is an object, just re-render the component :(
-       */
-      if (typeof args[i] === 'object' || args[i] !== oat.component[id].args[i]) {
-
-        return true;
-
-      }
+        });
 
     }
 
-    return false;
+    /**
+     * Remove the magic flags
+     */
+    function printEscaped(html) {
 
-  }
+        return html ? html.toString().replace(FLAG_REGEX, '') : '';
 
-  /**
-   * Given a name, an optional initialization function,
-   * and a render function, returns a component function.
-   */
-  oat.component = (name, init, render = init) => {
+    }
 
-    const component = (...args) => {
+    function parse(markup) {
 
-      /**
-       * Make sure we're rendering into the correct placeholder.
-       * If no parent node has been established, or we've finished
-       * a render and the current parent is now the top node,
-       * reset the top node.
-       */
-      if (!parent.node 
-        || !parent.node.parentNode 
-          || parent.node.parentNode.isSameNode(topNode)) {
+        let el = document.createElement('div');
 
-        parent.node = document.querySelector(`[data-oat="${name}"]`);
+        el.innerHTML = printEscaped(markup);
 
-        topNode = parent.node ? parent.node.parentNode : parent.node;
-
-      }
-
-      /**
-       * Track the number of times that this component has 
-       * been rendered into the current parent node.
-       */
-      parent.rendered[name] = parent.rendered[name] || 0;
-
-      /**
-       * Track the total number of children of this name
-       * that should be rendered into the current parent.
-       */
-      parent.children[name] = parent.children[name] || [];
-
-      /**
-       * Establish a unique ID for this instance of this component. 
-       */
-      const id = parent.id + name + parent.rendered[name];
-
-      component.id = id;
-
-      /**
-       * Only render this child into a new node
-       * if it hasn't already been done before.
-       */
-      if (!oat.component[id]) {
-
-        /**
-         * Force the component to re-render
-         */
-        function update() {
-
-          oat.component[id]();
-
+        if (el.children.length > 1) {
+            console.error('Components must have only one root node.');
         }
 
-        /**
-         * Initial state for the object we will
-         * insert into the component tree
-         */
-        const child = {
-            id,
-            node: document.createElement('div'),
-            children: {},
-            rendered: {}
-          },
-          
-          tempID = parent.id,
-          
-          vm = Object.create(defaultVM);
+        el = el.firstElementChild;
 
-        /**
-         * If a view model initializer was passed, run it,
-         * using this component as the parent so as not
-         * to trigger an infinite render loop.
-         */
-        if (render !== init) {
+        return el;
 
-          parent.id = id;
+    }
 
-          init(vm, update);
+    function isVmEligible(value) {
 
-          parent.id = tempID;
+        return value && !Array.isArray(value) && typeof value === 'object' && !value.outerHTML;
 
-        }
+    }
 
-        /**
-         * Insert this component into the parent
-         */
-        parent.children[name].push(1);
+    function bindPropertiesToSetter(obj, setter) {
 
-        parent.node.appendChild(child.node);
- 
-        /**
-         * Create a closure that will re-render
-         * this component into its parent node
-         */
-        oat.component[id] = (newArgs = args) => {
+        Object.keys(obj).forEach(key => {
 
-          const temp = parent;
+            let value = obj[key];
 
-          parent = child;
+            Object.defineProperty(obj, key, {
 
-          parent.rendered = {};
+                get: () => value,
+                set: newVal => {
 
-          oat.event[id] = [];
+                    value = newVal;
 
-          const oldNode = oat.component[id].node,
+                    setter('_childPropertyModified');
 
-            newNode = render(vm, ...newArgs);
+                }
 
-          oldNode.parentNode.replaceChild(newNode, oldNode);
+            });
 
-          oat.component[id].node = newNode;
+            if (isVmEligible(obj[key])) {
 
-          oat.component[id].args = newArgs;
+                bindPropertiesToSetter(obj[key], setter);
 
-          parent = temp;
+            }
 
-          return newNode;
+        });
 
+    }
+
+    function makeVM(model) {
+
+        const vm = {
+            _bindings: {}
         };
 
-        oat.component[id].node = child.node;
+        Object.keys(model).forEach(key => {
 
-        oat.component[id].node = oat.component[id]();
+            function get() {
 
-      /**
-       * If this component has been rendered before, but
-       * it's arguments may have changed, then re-render.
-       */
-      } else if (argsMayHaveChanged(args, id)) {
+                if (vm._currentlyCreatingBinding) {
 
-        oat.component[id](args);
-      
-      }
+                    vm._bindings[key] = vm._bindings[key] || [];
 
-      parent.rendered[name]++;
+                    vm._bindings[key].push(vm._currentlyCreatingBinding);
 
-      return oat.component[id].node;
+                }
 
-    };
- 
-    /**
-     * Remove all components of this name
-     * Used to clean up during route transitions
-     */
-    component.destroy = () => {
+                return model[key];
 
-      resetParent();
+            }
 
-      delete oat.component[component.id];
+            function set(value) {
 
-      document.querySelectorAll(`[data-oat="${name}"]`).forEach(el => {
+                if (model[key] !== value) {
 
-        el.innerHTML = '';
+                    if (value !== '_childPropertyModified') {
 
-      });
+                        if (isVmEligible(value)) {
 
-    };
+                            bindPropertiesToSetter(value, set);
 
-    return component;
+                        }
 
-  };
+                        model[key] = value;
 
-  /**
-   * Force a component to re-render by id
-   */
-  oat.render = id => {
+                    }
 
-    return (...args) => {
+                    if (vm._bindings[key]) {
 
-      return oat.component[id](args);
+                        vm._bindings[key].forEach(binding => binding());
 
-    };
+                    }
 
-  };
+                }
 
-  /**
-   * Associates an event handler with a specific
-   * instance of a component, stores a reference
-   * to it in the global namespace, and returns the
-   * reference for use in a template string.
-   */
-  oat.event = (handler = () => {}) => {
+            }
 
-    return (...args) => {
+            Object.defineProperty(vm, key, {
+                get,
+                set
+            });
 
-      const id = parent.id,
-        index = oat.event[id].length;
+            if (isVmEligible(model[key])) {
 
-      oat.event[id].push(e => {
+                bindPropertiesToSetter(model[key], set);
 
-        args.push(e, e.currentTarget);
+            }
 
-        if (handler.apply(undefined, args) !== false) {
+        });
 
-          oat.component[id]();
-
-        }
-      
-      });
-
-      return `oat.event['${id}'][${index}](event)`;
-
-    };
-
-  };
-
-  /**
-   * Force a route transition to the given URL
-   */
-  oat.go = route => {
-
-    window.history.pushState({}, '', route);
-
-    renderAll();
-
-  };
-
-  /**
-   * Given a route and optional event name,
-   * creates an Oat event and returns a
-   * reference to it for use in a template.
-   */
-  oat.link = (route, event) => {
-
-    const go = oat.event(e => {
-
-      e.preventDefault();
-
-      oat.go(route);
-
-    });
-
-    return event ? `on${event}=${go()}` : `href=${route} onclick=${go()}`;
-
-  };
-
-  /**
-   * Returns the deserialized query string.
-   */
-  function getQuery() {
-
-    const query = {};
-
-    if (window.location.search) {
-
-      window.location.search.substring(1).split('&').forEach(set => {
-
-        const pair = set.split('=');
-
-        query[pair[0]] = pair[1];
-
-      });
+        return vm;
 
     }
 
-    return query;
+    function evaluate(expression, scope) {
 
-  }
+        with (scope) {
 
-  /**
-   * Populate the universal request object with route information
-   */
-  function resetRequest() {
-    oat.request = {
-      href: window.location.href,
-      hostname: window.location.hostname,
-      path: window.location.pathname,
-      query: getQuery()
-    };
-  }
+            return eval(expression);
 
-  /**
-   * Creates a map of routes to components.
-   * Sets the renderAll function, which re-renders
-   * the whole app for the current route.
-   */
-  oat.app = fn => {
-
-    const routes = new Map();
-
-    fn(routes);
-
-    renderAll = () => {
-
-      resetRequest();
-
-      routes.forEach((component, route) => {
-        
-        /**
-         * Match against the full path
-         */
-        if (typeof route === 'string') {
-          route = `^${route}$`;
         }
 
-        const matches = window.location.pathname.match(route);
+    }
 
-        component.destroy();
+    function bind(template, vm, replace) {
+
+        const matches = template.match(/{(.*?)}/g);
 
         if (matches) {
 
-          /**
-           * The first item in matches is the whole string
-           */
-          matches.shift();
+            let firstTime = true;
 
-          oat.request.params = matches;
+            function binding() {
 
-          component();
+                let content = template;
+
+                matches.forEach(match => {
+
+                    const prop = match.substring(1, match.length - 1);
+
+                    if (firstTime) {
+
+                        vm._currentlyCreatingBinding = binding;
+
+                    }
+
+                    const value = evaluate(prop, vm);
+
+                    delete vm._currentlyCreatingBinding;
+
+                    if (typeof value === 'boolean') {
+
+                        content = content.replace(match, value ? prop : '');
+                    
+                    } else if (typeof value === 'function') {
+
+                        content = value;
+
+                    } else {
+
+                        content = content.replace(match, value);
+
+                    }
+
+                });
+
+                replace(content);
+
+            }
+
+            binding();
+
+            firstTime = false;
 
         }
 
-      });
+    }
 
-    };
+    function renderLoopContent(el, template, vm) {
 
-    renderAll();
+        const div = parse(`<div>${template}</div>`);
 
-  };
+        [...div.childNodes].forEach(child => {
 
-  window.oatServer = false;
+            el.appendChild(child);
 
-  window.oat = oat;
+        });
 
-  if (typeof module !== 'undefined' && module.exports) {
+        render(el, vm);
 
-    module.exports = oat;
+    }
 
-  }
+    function loop(tag, prop, temp, template, vm, replace) {
+
+        let firstTime = true;
+
+        function binding() {
+
+            let parts = [];
+
+            if (firstTime) {
+
+                vm._currentlyCreatingBinding = binding;
+
+            }
+
+            const model = evaluate(prop, vm);
+
+            const el = document.createElement(tag);
+
+            delete vm._currentlyCreatingBinding;
+
+            if (Array.isArray(model)) {
+
+                const tempOriginalValue = vm[temp];
+
+                model.forEach(item => {
+
+                    vm[temp] = item;
+
+                    renderLoopContent(el, template, vm);
+
+                });
+
+                vm[temp] = tempOriginalValue;
+
+            } else {
+
+                if (typeof temp === 'string') {
+
+                    temp = temp.split('.');
+
+                }
+
+                Object.keys(model).forEach(key => {
+
+                    const keyOriginalValue = vm[temp[0]],
+                          valOriginalValue = vm[temp[1]];
+
+                    vm[temp[0]] = key;
+                    vm[temp[1]] = model[key];
+
+                    renderLoopContent(el, template, vm);
+
+                    vm[temp[0]] = keyOriginalValue;
+                    vm[temp[1]] = valOriginalValue;
+
+                });
+
+            }
+
+            replace(el);
+
+        }
+
+        binding();
+
+        firstTime = false;
+
+    }
+
+    function render(el, vm) {
+
+        for (let i = 0; i < el.attributes.length; i++) {
+
+            const attribute = el.attributes[i];
+
+            if (attribute.specified && attribute.name !== 'as') {
+
+                if (attribute.name === 'loop' && el.attributes.as) {
+
+                    loop(el.tagName,
+                        attribute.value,
+                        el.attributes.as.value, 
+                        el.innerHTML, 
+                        vm,
+                        child => {
+                            el.parentNode.replaceChild(child, el);
+                            el = child;
+                        }
+                    );
+
+                    el.removeAttribute('loop');
+                    el.removeAttribute('as');
+
+                } else {
+
+                    bind(attribute.value, vm, value => {
+
+                        if (typeof value === 'function') {
+
+                            el.removeAttribute(attribute.name);
+
+                            el[attribute.name] = value;
+
+                        } else {
+
+                            attribute.value = value;
+
+                        }
+
+                    });
+
+                }
+
+            }
+
+        }
+
+        el.childNodes.forEach(child => {
+
+            if (child.nodeType === 3) {
+
+                bind(child.textContent, vm, value => {
+
+                    child.textContent = value;
+
+                });
+
+            } else {
+
+                const tag = child.tagName.toLowerCase();
+
+                if (vm[tag] !== undefined && vm[tag]._element) {
+
+                    el.replaceChild(vm[tag]._element, child);
+
+                } else {
+
+                    render(child, vm);
+
+                }
+
+            }
+
+        });
+
+        return el;
+
+    }
+
+    function oat(vm, template, parentSelector) {
+
+        vm._element = render(parse(template), vm);
+
+        if (parentSelector) {
+
+            const app = document.querySelector(parentSelector);
+
+            app.innerHTML = '';
+
+            app.appendChild(vm._element);
+
+        }
+
+        return vm;
+
+    }
+
+    oat.vm = makeVM;
+
+    window.oat = oat;
+
+    if (typeof module !== 'undefined' && module.exports) {
+
+        module.exports = oat;
+
+    }
 
 })();
