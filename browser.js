@@ -1,21 +1,11 @@
 (() => {
 
     const ESCAPE_MAP = {
-            '<': '&lt;',
-            '>': '&gt;',
-            '"': '&quot;',
-            '\'': '&apos;'
-        },
-
-        /**
-         * Flag for marking strings as escaped
-         */
-        MAGIC_FLAG = '&zwnj;',
-
-        /**
-         * Regex for removing the magic flag
-         */
-        FLAG_REGEX = new RegExp(MAGIC_FLAG, 'g');
+        '<': '&lt;',
+        '>': '&gt;',
+        '"': '&quot;',
+        '\'': '&apos;'
+    };
 
     /**
      * Convert a string, number, or array into a string
@@ -33,17 +23,9 @@
     /**
      * HTML escape a string unless it has been marked safe
      */
-    function htmlEscape(value) {
+    function escape(value) {
 
-        value = stringify(value);
-
-        if (value.indexOf(MAGIC_FLAG) === 0) {
-
-            return value;
-
-        }
-
-        return value.replace(/[<>'"]/g, c => {
+        return stringify(value).replace(/[<>'"]/g, c => {
 
             return ESCAPE_MAP[c];
 
@@ -51,20 +33,11 @@
 
     }
 
-    /**
-     * Remove the magic flags
-     */
-    function printEscaped(html) {
-
-        return html ? html.toString().replace(FLAG_REGEX, '') : '';
-
-    }
-
     function parse(markup) {
 
         let el = document.createElement('div');
 
-        el.innerHTML = printEscaped(markup);
+        el.innerHTML = markup;
 
         if (el.children.length > 1) {
             console.error('Components must have only one root node.');
@@ -78,7 +51,7 @@
 
     function isVmEligible(value) {
 
-        return value && !Array.isArray(value) && typeof value === 'object' && !value.outerHTML;
+        return value && !Array.isArray(value) && typeof value === 'object';
 
     }
 
@@ -180,7 +153,15 @@
 
         with (scope) {
 
-            return eval(expression);
+            try {
+
+                return eval(expression);
+
+            } catch(err) {
+
+                return '_invalidExpression';
+
+            }
 
         }
 
@@ -198,6 +179,8 @@
 
                 let content = template;
 
+                let value;
+
                 matches.forEach(match => {
 
                     const prop = match.substring(1, match.length - 1);
@@ -208,9 +191,11 @@
 
                     }
 
-                    const value = evaluate(prop, vm);
+                    value = evaluate(prop, vm);
 
                     delete vm._currentlyCreatingBinding;
+
+                    
 
                     if (typeof value === 'boolean') {
 
@@ -220,7 +205,13 @@
 
                         content = value;
 
+                    } else if (value && typeof value === 'object' && value._element) {
+
+                        content = value._element;
+
                     } else {
+
+                        value = value === '_invalidExpression' ? '' : escape(value);
 
                         content = content.replace(match, value);
 
@@ -240,15 +231,21 @@
 
     }
 
+    function copyChildren(from, to) {
+
+        [...from.childNodes].forEach(child => {
+
+            to.appendChild(child);
+
+        });
+
+    }
+
     function renderLoopContent(el, template, vm) {
 
         const div = parse(`<div>${template}</div>`);
 
-        [...div.childNodes].forEach(child => {
-
-            el.appendChild(child);
-
-        });
+        copyChildren(div, el);
 
         render(el, vm);
 
@@ -270,46 +267,50 @@
 
             const model = evaluate(prop, vm);
 
-            const el = document.createElement(tag);
-
             delete vm._currentlyCreatingBinding;
 
-            if (Array.isArray(model)) {
+            const el = document.createElement(tag);
 
-                const tempOriginalValue = vm[temp];
+            if (model !== '_invalidExpression') {
 
-                model.forEach(item => {
+                if (Array.isArray(model)) {
 
-                    vm[temp] = item;
+                    const tempOriginalValue = vm[temp];
 
-                    renderLoopContent(el, template, vm);
+                    model.forEach(item => {
 
-                });
+                        vm[temp] = item;
 
-                vm[temp] = tempOriginalValue;
+                        renderLoopContent(el, template, vm);
 
-            } else {
+                    });
 
-                if (typeof temp === 'string') {
+                    vm[temp] = tempOriginalValue;
 
-                    temp = temp.split('.');
+                } else {
+
+                    if (typeof temp === 'string') {
+
+                        temp = temp.split('.');
+
+                    }
+
+                    Object.keys(model).forEach(key => {
+
+                        const keyOriginalValue = vm[temp[0]],
+                              valOriginalValue = vm[temp[1]];
+
+                        vm[temp[0]] = key;
+                        vm[temp[1]] = model[key];
+
+                        renderLoopContent(el, template, vm);
+
+                        vm[temp[0]] = keyOriginalValue;
+                        vm[temp[1]] = valOriginalValue;
+
+                    });
 
                 }
-
-                Object.keys(model).forEach(key => {
-
-                    const keyOriginalValue = vm[temp[0]],
-                          valOriginalValue = vm[temp[1]];
-
-                    vm[temp[0]] = key;
-                    vm[temp[1]] = model[key];
-
-                    renderLoopContent(el, template, vm);
-
-                    vm[temp[0]] = keyOriginalValue;
-                    vm[temp[1]] = valOriginalValue;
-
-                });
 
             }
 
@@ -323,11 +324,19 @@
 
     }
 
-    function render(el, vm) {
+    function forEachAttribute(el, callback) {
 
         for (let i = 0; i < el.attributes.length; i++) {
 
-            const attribute = el.attributes[i];
+            callback(el.attributes[i]);
+
+        }
+
+    }
+
+    function render(el, vm) {
+
+        forEachAttribute(el, attribute => {
 
             if (attribute.specified && attribute.name !== 'as') {
 
@@ -340,6 +349,9 @@
                         vm,
                         child => {
                             el.parentNode.replaceChild(child, el);
+                            forEachAttribute(el, attr => {
+                                child.setAttribute(attr.name, attr.value);
+                            });
                             el = child;
                         }
                     );
@@ -369,7 +381,7 @@
 
             }
 
-        }
+        });
 
         el.childNodes.forEach(child => {
 
@@ -387,7 +399,13 @@
 
                 if (vm[tag] !== undefined && vm[tag]._element) {
 
-                    el.replaceChild(vm[tag]._element, child);
+                    bind(`{${tag}}`, vm, newChild => {
+
+                        el.replaceChild(newChild, child);
+
+                        child = newChild;
+
+                    });
 
                 } else {
 
@@ -422,6 +440,10 @@
     }
 
     oat.vm = makeVM;
+
+    oat.placeholder = {
+        _element: document.createElement('div')
+    };
 
     window.oat = oat;
 
